@@ -5,6 +5,7 @@ import sys
 global maze
 global qtable
 
+np.set_printoptions(formatter={'float':"{:6.5g}".format})
 
 def up(index):
     return (index[0]-1, index[1])
@@ -28,7 +29,7 @@ def step(state, a):
     if l!=[' ']:
         # if we hit a wall
         new_state = state
-        reward = -1
+        reward = -0.2
 
     elif l==['F']:
         # if we are finished
@@ -37,10 +38,10 @@ def step(state, a):
 
     else:
         # move
-        reward = 1
+        reward = 0.1
+
 
     return new_state, done, reward
-
 
 
 
@@ -52,8 +53,10 @@ maze = np.asarray([['+', '-', '+', '-', '+', '-', '+'],
         ['|', '$', ' ', ' ', ' ', ' ', '|'],
         ['+', '-', '+', '-', '+', '-', '+']])
 
-maze = np.where((maze=='+')|(maze=='-')|(maze=='|'), 1, maze)
 
+
+maze = np.where((maze=='+')|(maze=='-')|(maze=='|'), 1, maze)
+print(maze)
 
 # quantise
 spaces = np.argwhere(maze==' ')
@@ -68,17 +71,14 @@ state_finish = np.where(maze == 'F')
 mapping[tuple(np.squeeze(state))] = len(mapping)
 mapping[tuple(np.squeeze(state_finish))] = len(mapping)
 
-print(maze)
-print(mapping)
-
 qtable = np.zeros((len(mapping), 4))
 
-learning_rate = 0.8
-discount_rate = 0.7
+learning_rate = 0.6
+discount_rate = 0.5
 epsilon = 0.9
-decay_rate= 0.05
+decay_rate= 0.005
 
-num_episodes = 10
+num_episodes = 50
 max_steps = 50
 
 print("Training agent...")
@@ -103,9 +103,12 @@ for episode in range(num_episodes):
         new_state, done, reward = step(state, action)
         new_state_index = mapping[tuple(np.squeeze(new_state))]
 
+
         # update q table
-        qtable[new_state_index, action] += learning_rate * (reward + discount_rate * np.max(qtable[new_state_index,:])-qtable[old_state_index,action])
-        np.around(qtable, 2)
+        qtable[new_state_index, action] += learning_rate * (reward + discount_rate *
+                                            np.max(qtable[new_state_index,:])-qtable[old_state_index,action]).round(1)
+
+
         state = new_state
         if done == True:
             print("Done")
@@ -115,24 +118,25 @@ for episode in range(num_episodes):
 
 
 print(qtable)
-# # 14, 10, 11, 12, 13, 9, 8, 6, 4, 3, 2, 1, 0, 5, 7, 8, 16
-print(np.argmax(qtable[14]))
-print(np.argmax(qtable[10]))
-print(np.argmax(qtable[11]))
-
-sys.exit()
 
 rewards = 0
 done = False
 print(f"TRAINED AGENT")
-for s in range(10):
-
+print(mapping)
+print(maze)
+state = np.where(maze == '$')
+for s in range(2):
+    print(tuple(np.squeeze(state)))
+    print(qtable[mapping[tuple(np.squeeze(state))]])
     action = np.argmax(qtable[mapping[tuple(np.squeeze(state))],:])
-    new_state, reward, done = step(state, action)
-    print(reward)
+    print(action)
+    new_state, done, reward = step(state, action)
+
+
+
     rewards += reward
 
-    print(f"score: {rewards}")
+    # print(f"score: {rewards}")
     state = new_state
 
     if done == True:
